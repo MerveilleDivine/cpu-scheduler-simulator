@@ -10,9 +10,9 @@
 
 # CPU Scheduler Simulator
 
-A C++ command-line simulator for exploring how CPU scheduling decisions change waiting time, turnaround time, and response time.
+A C++ command-line simulator for exploring how preemptive and non-preemptive CPU scheduling decisions change waiting time, turnaround time, and response time.
 
-Give it one process file and an algorithm, and it produces the execution order, per-process metrics, averages, and a Gantt-style timeline. Comparison mode runs the same workload through several schedulers so their trade-offs are visible side by side.
+Give it one process file and an algorithm, and it produces the execution order, per-process metrics, averages, and a Gantt-style timeline. Comparison mode runs the same workload through five schedulers so their trade-offs are visible side by side. Reports can be emitted as readable terminal text or structured JSON.
 
 ## Why this project matters
 
@@ -34,6 +34,7 @@ The algorithms are the subject of the project. The refactor is the better demons
 |---|---|---|
 | **FCFS** | Non-preemptive | Earliest arriving process runs first |
 | **SJF** | Non-preemptive | Shortest available burst runs first |
+| **SRTF** | Preemptive | Process with the shortest remaining time runs, with reevaluation on every time step |
 | **Priority** | Non-preemptive | Lowest priority number runs first |
 | **Round Robin** | Preemptive | Ready processes share the CPU using a time quantum |
 | **None** | Sequential | Processes run in file order |
@@ -44,12 +45,13 @@ Using the included sample workload and a Round Robin quantum of `2`:
 
 | Algorithm | Avg. waiting | Avg. turnaround | Avg. response |
 |---|---:|---:|---:|
-| FCFS | 7.00 ms | 11.00 ms | 7.00 ms |
+| FCFS | 7.00 ms | 10.80 ms | 7.00 ms |
 | SJF | 6.40 ms | 10.20 ms | 6.40 ms |
+| SRTF | 6.00 ms | 9.80 ms | 4.80 ms |
 | Priority | 6.40 ms | 10.20 ms | 6.40 ms |
 | Round Robin | 11.40 ms | 15.20 ms | 3.00 ms |
 
-Round Robin responds sooner in this workload, but increases average waiting and turnaround time. The simulator is meant to expose that kind of trade-off rather than declare one universal winner.
+SRTF gives this workload the lowest average waiting and turnaround time. Round Robin responds sooner, but increases average waiting and turnaround time. The simulator is meant to expose that kind of trade-off rather than declare one universal winner.
 
 ## Architecture
 
@@ -67,9 +69,9 @@ flowchart LR
 |---|---|
 | `Parser` | Reads and validates process data |
 | `Scheduler` | Implements each scheduling strategy |
-| `Reporter` | Formats metrics, comparisons, and the timeline |
+| `Reporter` | Formats text and JSON metrics, comparisons, process details, and the timeline |
 | `main.cpp` | Parses CLI arguments and coordinates the workflow |
-| `tests/` | Exercises algorithms, errors, comparison mode, and file output |
+| `tests/` | Exercises algorithms, metrics, parsing, errors, JSON, comparison mode, and file output |
 
 ## Quick start
 
@@ -105,6 +107,12 @@ Run Round Robin:
 ./scheduler -f examples/sample_input.txt --algorithm rr --quantum 2
 ```
 
+Run the preemptive shortest-remaining-time scheduler:
+
+```bash
+./scheduler -f examples/sample_input.txt --algorithm srtf
+```
+
 Compare the implemented schedulers:
 
 ```bash
@@ -117,7 +125,14 @@ Write the report to a file:
 ./scheduler -f examples/sample_input.txt -o output.txt --algorithm priority
 ```
 
-Supported algorithm values are `none`, `fcfs`, `sjf`, `priority`, and `rr`. Short and long CLI options are both accepted.
+Emit a machine-readable report:
+
+```bash
+./scheduler -f examples/sample_input.txt --algorithm srtf --format json
+./scheduler -f examples/sample_input.txt --compare --quantum 2 --format json -o comparison.json
+```
+
+Supported algorithm values are `none`, `fcfs`, `sjf`, `srtf`, `priority`, and `rr`. Supported formats are `text` and `json`. Short and long CLI options are both accepted. Conflicting modes, unsupported formats, and non-integer quantum values fail with clear errors.
 
 ## Input format
 
@@ -126,6 +141,8 @@ Each line represents one process:
 ```text
 burst_time:arrival_time:priority
 ```
+
+Whitespace is ignored, blank lines are allowed, and `#` starts a comment. Burst time must be greater than zero and arrival time cannot be negative. Invalid fields report the exact line and field name.
 
 The included sample is:
 
@@ -151,7 +168,7 @@ P4        2         4       2          12      16         10        14          
 P5        3         3       1          16      19         13        16           13
 
 Average Waiting Time: 7.00 ms
-Average Turnaround Time: 11.00 ms
+Average Turnaround Time: 10.80 ms
 Average Response Time: 7.00 ms
 
 Gantt Chart:
@@ -167,15 +184,24 @@ Run the regression suite directly:
 bash tests/run_cli_tests.sh
 ```
 
+Compile and run the focused C++ tests directly:
+
+```bash
+g++ -std=c++11 -Wall -Wextra -Wpedantic tests/scheduler_tests.cpp src/Parser.cpp src/Scheduler.cpp src/Reporter.cpp -Iinclude -o scheduler_unit_tests
+./scheduler_unit_tests
+```
+
 The suite checks:
 
-- FCFS, SJF, Priority, and Round Robin output;
+- FCFS, SJF, SRTF, Priority, and Round Robin output;
 - comparison mode;
 - the generated Gantt chart;
 - output-file generation;
-- invalid Round Robin quantum handling.
+- JSON reports and comparisons through Python's standard JSON parser;
+- invalid Round Robin quantum handling;
+- parser comments, whitespace, field validation, SRTF preemption, idle time, and metric calculations.
 
-GitHub Actions repeats the direct compiler build, regression suite, CMake build, and CTest run on Ubuntu.
+GitHub Actions compiles with strict warnings, runs focused C++ tests and CLI regression tests, then repeats the build and both test targets through CMake and CTest on Ubuntu.
 
 ## Repository map
 
@@ -194,16 +220,19 @@ cpu-scheduler-simulator/
 │   ├── Parser.cpp
 │   ├── Reporter.cpp
 │   └── Scheduler.cpp
-├── tests/run_cli_tests.sh
+├── tests/
+│   ├── run_cli_tests.sh
+│   ├── scheduler_tests.cpp
+│   └── validate_json.py
 ├── CMakeLists.txt
 └── README.md
 ```
 
 ## Current scope
 
-The simulator currently focuses on educational, single-core CPU scheduling. Preemptive SJF and preemptive Priority Scheduling are not implemented yet.
+The simulator currently focuses on educational, single-core CPU scheduling. Context-switch overhead, multicore scheduling, preemptive Priority Scheduling, and starvation prevention are not implemented yet.
 
-Possible next steps include exporting comparison data as CSV or JSON, improving the terminal timeline, and adding lower-level scheduler unit tests.
+Possible next steps include configurable context-switch cost, CSV export, starvation and fairness metrics, preemptive Priority Scheduling with aging, and a richer terminal timeline.
 
 ## Technology
 

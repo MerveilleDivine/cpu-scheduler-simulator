@@ -4,10 +4,12 @@ on:
   push:
     branches:
       - main
-      - fix/recruiter-ready-scheduler
   pull_request:
     branches:
       - main
+
+permissions:
+  contents: read
 
 jobs:
   build-and-test:
@@ -22,10 +24,16 @@ jobs:
         run: g++ --version
 
       - name: Compile directly with g++
-        run: g++ -std=c++11 src/main.cpp src/Parser.cpp src/Scheduler.cpp src/Reporter.cpp -Iinclude -o scheduler
+        run: g++ -std=c++11 -Wall -Wextra -Wpedantic src/main.cpp src/Parser.cpp src/Scheduler.cpp src/Reporter.cpp -Iinclude -o scheduler
 
       - name: Run CLI regression tests
         run: bash tests/run_cli_tests.sh
+
+      - name: Compile focused unit tests
+        run: g++ -std=c++11 -Wall -Wextra -Wpedantic tests/scheduler_tests.cpp src/Parser.cpp src/Scheduler.cpp src/Reporter.cpp -Iinclude -o scheduler_unit_tests
+
+      - name: Run focused unit tests
+        run: ./scheduler_unit_tests
 
       - name: Configure with CMake
         run: cmake -S . -B build

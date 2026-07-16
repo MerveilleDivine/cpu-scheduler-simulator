@@ -10,6 +10,21 @@
 using namespace std;
 
 namespace {
+void validateProcesses(const vector<Process>& processes) {
+    if (processes.empty()) {
+        throw runtime_error("At least one process is required.");
+    }
+
+    for (size_t i = 0; i < processes.size(); ++i) {
+        if (processes[i].burstTime <= 0 || processes[i].remainingTime <= 0) {
+            throw runtime_error("Process burst and remaining time must be greater than 0.");
+        }
+        if (processes[i].arrivalTime < 0) {
+            throw runtime_error("Process arrival time cannot be negative.");
+        }
+    }
+}
+
 void calculateMetrics(Process& process) {
     process.turnaroundTime = process.completionTime - process.arrivalTime;
     process.waitingTime = process.turnaroundTime - process.burstTime;
@@ -48,6 +63,7 @@ ScheduleResult makeResult(const string& algorithmName, vector<Process> processes
 }
 
 ScheduleResult runFirstComeFirstServed(const vector<Process>& inputProcesses) {
+    validateProcesses(inputProcesses);
     vector<Process> processes = inputProcesses;
     vector<GanttSegment> ganttChart;
 
@@ -79,6 +95,7 @@ ScheduleResult runFirstComeFirstServed(const vector<Process>& inputProcesses) {
 }
 
 ScheduleResult runNoScheduling(const vector<Process>& inputProcesses) {
+    validateProcesses(inputProcesses);
     vector<Process> processes = inputProcesses;
     vector<GanttSegment> ganttChart;
     int currentTime = 0;
@@ -102,6 +119,7 @@ ScheduleResult runNoScheduling(const vector<Process>& inputProcesses) {
 }
 
 ScheduleResult runShortestJobFirst(const vector<Process>& inputProcesses) {
+    validateProcesses(inputProcesses);
     vector<Process> processes = inputProcesses;
     vector<GanttSegment> ganttChart;
     int currentTime = 0;
@@ -155,7 +173,66 @@ ScheduleResult runShortestJobFirst(const vector<Process>& inputProcesses) {
     return makeResult("Shortest Job First - Non-Preemptive", processes, ganttChart);
 }
 
+ScheduleResult runShortestRemainingTimeFirst(const vector<Process>& inputProcesses) {
+    validateProcesses(inputProcesses);
+    vector<Process> processes = inputProcesses;
+    vector<GanttSegment> ganttChart;
+    int currentTime = 0;
+    int completedProcesses = 0;
+
+    while (completedProcesses < static_cast<int>(processes.size())) {
+        int selectedIndex = -1;
+
+        for (size_t i = 0; i < processes.size(); ++i) {
+            if (processes[i].remainingTime <= 0 || processes[i].arrivalTime > currentTime) {
+                continue;
+            }
+
+            if (selectedIndex == -1 ||
+                processes[i].remainingTime < processes[selectedIndex].remainingTime ||
+                (processes[i].remainingTime == processes[selectedIndex].remainingTime &&
+                 processes[i].arrivalTime < processes[selectedIndex].arrivalTime) ||
+                (processes[i].remainingTime == processes[selectedIndex].remainingTime &&
+                 processes[i].arrivalTime == processes[selectedIndex].arrivalTime &&
+                 processes[i].id < processes[selectedIndex].id)) {
+                selectedIndex = static_cast<int>(i);
+            }
+        }
+
+        if (selectedIndex == -1) {
+            int nextArrival = -1;
+            for (size_t i = 0; i < processes.size(); ++i) {
+                if (processes[i].remainingTime > 0 &&
+                    (nextArrival == -1 || processes[i].arrivalTime < nextArrival)) {
+                    nextArrival = processes[i].arrivalTime;
+                }
+            }
+            addGanttSegment(ganttChart, 0, currentTime, nextArrival);
+            currentTime = nextArrival;
+            continue;
+        }
+
+        Process& process = processes[selectedIndex];
+        if (process.startTime == -1) {
+            process.startTime = currentTime;
+        }
+
+        addGanttSegment(ganttChart, process.id, currentTime, currentTime + 1);
+        --process.remainingTime;
+        ++currentTime;
+
+        if (process.remainingTime == 0) {
+            process.completionTime = currentTime;
+            calculateMetrics(process);
+            ++completedProcesses;
+        }
+    }
+
+    return makeResult("Shortest Remaining Time First - Preemptive", processes, ganttChart);
+}
+
 ScheduleResult runPriorityScheduling(const vector<Process>& inputProcesses) {
+    validateProcesses(inputProcesses);
     vector<Process> processes = inputProcesses;
     vector<GanttSegment> ganttChart;
     int currentTime = 0;
@@ -213,6 +290,7 @@ ScheduleResult runRoundRobin(const vector<Process>& inputProcesses, int quantum)
     if (quantum <= 0) {
         throw runtime_error("Round Robin quantum must be greater than 0.");
     }
+    validateProcesses(inputProcesses);
 
     vector<Process> processes = inputProcesses;
     vector<GanttSegment> ganttChart;
@@ -284,6 +362,7 @@ vector<ScheduleResult> runAllAlgorithms(const vector<Process>& processes, int ro
     vector<ScheduleResult> results;
     results.push_back(runFirstComeFirstServed(processes));
     results.push_back(runShortestJobFirst(processes));
+    results.push_back(runShortestRemainingTimeFirst(processes));
     results.push_back(runPriorityScheduling(processes));
     results.push_back(runRoundRobin(processes, roundRobinQuantum));
     return results;
