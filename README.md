@@ -1,22 +1,143 @@
+<p align="center">
+  <img src="./assets/readme-banner.svg" width="100%" alt="CPU Scheduler Simulator" />
+</p>
+
+<p align="center">
+  <a href="https://github.com/MerveilleDivine/OS_project_scheduler/actions/workflows/cpp-ci.yml">
+    <img src="https://github.com/MerveilleDivine/OS_project_scheduler/actions/workflows/cpp-ci.yml/badge.svg" alt="C++ CI" />
+  </a>
+</p>
+
 # CPU Scheduler Simulator
 
-![C++ CI](https://github.com/MerveilleDivine/OS_project_scheduler/actions/workflows/cpp-ci.yml/badge.svg)
+A C++ command-line simulator for exploring how CPU scheduling decisions change waiting time, turnaround time, and response time.
 
-A small C++ simulator I built to see how different CPU scheduling decisions affect waiting time, turnaround time, and response time.
+Give it one process file and an algorithm, and it produces the execution order, per-process metrics, averages, and a Gantt-style timeline. Comparison mode runs the same workload through several schedulers so their trade-offs are visible side by side.
 
-Give it a process file, choose an algorithm, and it prints the full schedule, per-process metrics, averages, and a simple Gantt chart. It can also run the same input through several algorithms so the results are easy to compare.
+## Why this project matters
 
-## What it does
+This began as an Operating Systems course assignment. The first version worked, but most of the logic lived in one file.
 
-- runs **FCFS**, **SJF**, **Priority Scheduling**, and **Round Robin**
-- accepts process data from a text file
-- prints start, completion, waiting, turnaround, and response times
-- shows average metrics for each run
-- produces a simple Gantt chart
-- compares several algorithms on the same input
-- includes regression tests, CMake, CTest, and GitHub Actions CI
+I returned to it later and rebuilt the project around clearer responsibilities:
 
-## Example
+- parsing is separate from scheduling;
+- scheduling is separate from reporting;
+- behaviour is protected by CLI regression tests;
+- the project builds through both `g++` and CMake;
+- every push and pull request is checked by GitHub Actions.
+
+The algorithms are the subject of the project. The refactor is the better demonstration of how I engineer now.
+
+## Algorithms
+
+| Algorithm | Scheduling model | Selection rule |
+|---|---|---|
+| **FCFS** | Non-preemptive | Earliest arriving process runs first |
+| **SJF** | Non-preemptive | Shortest available burst runs first |
+| **Priority** | Non-preemptive | Lowest priority number runs first |
+| **Round Robin** | Preemptive | Ready processes share the CPU using a time quantum |
+| **None** | Sequential | Processes run in file order |
+
+## Comparison result
+
+Using the included sample workload and a Round Robin quantum of `2`:
+
+| Algorithm | Avg. waiting | Avg. turnaround | Avg. response |
+|---|---:|---:|---:|
+| FCFS | 7.00 ms | 11.00 ms | 7.00 ms |
+| SJF | 6.40 ms | 10.20 ms | 6.40 ms |
+| Priority | 6.40 ms | 10.20 ms | 6.40 ms |
+| Round Robin | 11.40 ms | 15.20 ms | 3.00 ms |
+
+Round Robin responds sooner in this workload, but increases average waiting and turnaround time. The simulator is meant to expose that kind of trade-off rather than declare one universal winner.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    A[Process file] --> B[Parser]
+    B --> C[Scheduler]
+    C --> D[Schedule result]
+    D --> E[Reporter]
+    E --> F[Terminal]
+    E --> G[Output file]
+```
+
+| Component | Responsibility |
+|---|---|
+| `Parser` | Reads and validates process data |
+| `Scheduler` | Implements each scheduling strategy |
+| `Reporter` | Formats metrics, comparisons, and the timeline |
+| `main.cpp` | Parses CLI arguments and coordinates the workflow |
+| `tests/` | Exercises algorithms, errors, comparison mode, and file output |
+
+## Quick start
+
+### Build with CMake
+
+```bash
+cmake -S . -B build
+cmake --build build
+ctest --test-dir build --output-on-failure
+```
+
+The executable is created at `build/scheduler`.
+
+### Or compile directly
+
+```bash
+g++ -std=c++11 src/main.cpp src/Parser.cpp src/Scheduler.cpp src/Reporter.cpp -Iinclude -o scheduler
+```
+
+## Usage
+
+Run one algorithm:
+
+```bash
+./scheduler -f examples/sample_input.txt --algorithm fcfs
+```
+
+Run Round Robin:
+
+```bash
+./scheduler -f examples/sample_input.txt --algorithm rr --quantum 2
+```
+
+Compare the implemented schedulers:
+
+```bash
+./scheduler -f examples/sample_input.txt --compare --quantum 2
+```
+
+Write the report to a file:
+
+```bash
+./scheduler -f examples/sample_input.txt -o output.txt --algorithm priority
+```
+
+Supported algorithm values are `none`, `fcfs`, `sjf`, `priority`, and `rr`. Short and long CLI options are both accepted.
+
+## Input format
+
+Each line represents one process:
+
+```text
+burst_time:arrival_time:priority
+```
+
+The included sample is:
+
+```text
+5:0:3
+4:1:2
+3:1:1
+4:2:2
+3:3:1
+```
+
+In this implementation, a smaller priority number means a higher priority.
+
+## Example output
 
 ```text
 Scheduling Method: First Come, First Served
@@ -36,115 +157,31 @@ Gantt Chart:
 0     5     9    12    16    19
 ```
 
-## How the pieces fit together
+## Verification
 
-```mermaid
-flowchart LR
-    A[Process input file] --> B[Parser]
-    B --> C[Scheduler]
-    C --> D[Metrics]
-    D --> E[Reporter]
-    E --> F[Terminal]
-    E --> G[Output file]
-```
-
-I kept parsing, scheduling, and reporting separate so the code is easier to read, test, and change without everything depending on one file.
-
-## Algorithms included
-
-| Algorithm | Type | What it does |
-|---|---|---|
-| **FCFS** | Non-preemptive | Runs processes in arrival order |
-| **SJF** | Non-preemptive | Chooses the shortest available job |
-| **Priority** | Non-preemptive | Chooses the highest-priority available process |
-| **Round Robin** | Preemptive | Gives ready processes turns using a time quantum |
-| **None** | Sequential | Runs processes in the order they appear in the file |
-
-> In this implementation, a lower priority number means a higher priority.
-
-## Comparing algorithms
-
-Comparison mode uses the same process set for each algorithm and places the average results next to each other.
+Run the regression suite directly:
 
 ```bash
-./scheduler -f examples/sample_input.txt --compare --quantum 2
+bash tests/run_cli_tests.sh
 ```
 
-Using the included sample input:
+The suite checks:
 
-| Algorithm | Avg. waiting | Avg. turnaround | Avg. response |
-|---|---:|---:|---:|
-| FCFS | 7.00 | 11.00 | 7.00 |
-| SJF | 6.40 | 10.20 | 6.40 |
-| Priority | 6.40 | 10.20 | 6.40 |
-| Round Robin, quantum 2 | 11.40 | 15.20 | 3.00 |
+- FCFS, SJF, Priority, and Round Robin output;
+- comparison mode;
+- the generated Gantt chart;
+- output-file generation;
+- invalid Round Robin quantum handling.
 
-The point is not to crown one algorithm as the winner. The table makes the trade-offs visible. In this sample, Round Robin responds sooner, but the processes spend more time waiting overall.
+GitHub Actions repeats the direct compiler build, regression suite, CMake build, and CTest run on Ubuntu.
 
-## Input format
-
-Each line represents one process:
-
-```text
-burst_time:arrival_time:priority
-```
-
-Example:
-
-```text
-5:0:3
-4:1:2
-3:1:1
-4:2:2
-3:3:1
-```
-
-A sample file is already included at `examples/sample_input.txt`.
-
-## Build and run
-
-### Compile with `g++`
-
-```bash
-g++ -std=c++11 src/main.cpp src/Parser.cpp src/Scheduler.cpp src/Reporter.cpp -Iinclude -o scheduler
-```
-
-### Or build with CMake
-
-```bash
-cmake -S . -B build
-cmake --build build
-ctest --test-dir build --output-on-failure
-```
-
-### Run FCFS
-
-```bash
-./scheduler -f examples/sample_input.txt -o output.txt --algorithm fcfs
-```
-
-### Run Round Robin
-
-```bash
-./scheduler -f examples/sample_input.txt -o output.txt --algorithm rr --quantum 2
-```
-
-Supported values for `--algorithm`:
-
-```text
-none, fcfs, sjf, priority, rr
-```
-
-The longer CLI form works too:
-
-```bash
-./scheduler --input examples/sample_input.txt --output output.txt --algorithm sjf
-```
-
-## Project structure
+## Repository map
 
 ```text
 OS_project_scheduler/
+├── .github/workflows/cpp-ci.yml
+├── assets/readme-banner.svg
+├── examples/sample_input.txt
 ├── include/
 │   ├── Parser.h
 │   ├── Process.h
@@ -155,63 +192,17 @@ OS_project_scheduler/
 │   ├── Parser.cpp
 │   ├── Reporter.cpp
 │   └── Scheduler.cpp
-├── tests/
-│   └── run_cli_tests.sh
-├── examples/
-│   └── sample_input.txt
-├── .github/workflows/
-│   └── cpp-ci.yml
+├── tests/run_cli_tests.sh
 ├── CMakeLists.txt
 └── README.md
 ```
 
-| Part | Role |
-|---|---|
-| `Parser` | Reads and validates process data |
-| `Scheduler` | Runs the selected scheduling logic |
-| `Reporter` | Formats metrics, averages, and the Gantt chart |
-| `main.cpp` | Handles the CLI and coordinates the program |
-| `tests/` | Checks the expected CLI output and error cases |
+## Current scope
 
-## Tests and CI
+The simulator currently focuses on educational, single-core CPU scheduling. Preemptive SJF and preemptive Priority Scheduling are not implemented yet.
 
-Run the regression tests locally with:
+Possible next steps include exporting comparison data as CSV or JSON, improving the terminal timeline, and adding lower-level scheduler unit tests.
 
-```bash
-bash tests/run_cli_tests.sh
-```
+## Technology
 
-The tests cover:
-
-- FCFS
-- SJF
-- Priority Scheduling
-- Round Robin
-- comparison mode
-- invalid Round Robin quantum handling
-- output file generation
-
-GitHub Actions also compiles the project with `g++`, runs the CLI tests, builds with CMake, and runs CTest.
-
-## Why I came back to this project
-
-This started as an Operating Systems course assignment. The first version worked, but most of the logic lived in one file and the project was harder to review or extend than it needed to be.
-
-I returned to it later and rebuilt the structure around clearer responsibilities. I separated the parser, scheduling logic, reporting, and CLI flow, then added comparison mode, regression tests, CMake, CTest, and CI.
-
-The algorithms are still the heart of the project, but the refactor is the part that best shows how I think now: make the code easier to follow, protect the behaviour with tests, and leave the project in a state where someone else can work with it.
-
-## Tech and concepts
-
-`C++11` `Operating Systems` `CPU Scheduling` `Queues` `File I/O` `CLI Design` `Regression Testing` `CMake` `CTest` `GitHub Actions`
-
-## Next
-
-- add preemptive SJF and Priority Scheduling
-- export comparison results as CSV or JSON
-- improve the Gantt chart visualisation
-- add lower-level unit tests for scheduler functions
-
-## License
-
-MIT License.
+`C++11` · `Operating Systems` · `CPU Scheduling` · `CMake` · `CTest` · `GitHub Actions`
