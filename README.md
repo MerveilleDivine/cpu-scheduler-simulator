@@ -3,8 +3,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/MerveilleDivine/OS_project_scheduler/actions/workflows/cpp-ci.yml">
-    <img src="https://github.com/MerveilleDivine/OS_project_scheduler/actions/workflows/cpp-ci.yml/badge.svg" alt="C++ CI" />
+  <a href="https://github.com/MerveilleDivine/cpu-scheduler-simulator/actions/workflows/cpp-ci.yml">
+    <img src="https://github.com/MerveilleDivine/cpu-scheduler-simulator/actions/workflows/cpp-ci.yml/badge.svg" alt="C++ CI" />
   </a>
 </p>
 
@@ -180,7 +180,7 @@ GitHub Actions repeats the direct compiler build, regression suite, CMake build,
 ## Repository map
 
 ```text
-OS_project_scheduler/
+cpu-scheduler-simulator/
 ├── .github/workflows/cpp-ci.yml
 ├── assets/readme-banner.svg
 ├── examples/sample_input.txt
