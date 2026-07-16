@@ -91,6 +91,8 @@ g++ -std=c++11 src/main.cpp src/Parser.cpp src/Scheduler.cpp src/Reporter.cpp -I
 
 ## Usage
 
+The examples below use the directly compiled `./scheduler` binary. If you built with CMake, use `./build/scheduler` on Linux and macOS or the corresponding executable path produced by your generator.
+
 Run one algorithm:
 
 ```bash
