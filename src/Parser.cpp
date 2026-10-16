@@ -7,108 +7,95 @@
 #include <string>
 #include <vector>
 
-using namespace std;
-
 namespace {
-string trim(const string& value) {
-    const string whitespace = " \t\r\n";
-    const size_t start = value.find_first_not_of(whitespace);
-    if (start == string::npos) {
+std::string trim(const std::string& value) {
+    const std::string whitespace = " \t\r\n";
+    const std::size_t start = value.find_first_not_of(whitespace);
+    if (start == std::string::npos) {
         return "";
     }
-    const size_t end = value.find_last_not_of(whitespace);
+    const std::size_t end = value.find_last_not_of(whitespace);
     return value.substr(start, end - start + 1);
 }
 
-vector<string> split(const string& line, char delimiter) {
-    vector<string> tokens;
-    string token;
-    stringstream ss(line);
-
-    while (getline(ss, token, delimiter)) {
-        tokens.push_back(token);
-    }
-
-    return tokens;
-}
-
-int parseInteger(const string& token, const string& fieldName, int lineNumber) {
-    const string value = trim(token);
-    size_t parsedCharacters = 0;
-
+int parseInteger(const std::string& token, const std::string& fieldName, std::size_t lineNumber) {
+    const std::string value = trim(token);
+    std::size_t parsedCharacters = 0;
     try {
-        const long long parsed = stoll(value, &parsedCharacters);
-        if (value.empty() || parsedCharacters != value.size() ||
-            parsed < numeric_limits<int>::min() || parsed > numeric_limits<int>::max()) {
-            throw invalid_argument("invalid integer");
+        const int parsed = std::stoi(value, &parsedCharacters);
+        if (parsedCharacters == value.size()) {
+            return parsed;
         }
-        return static_cast<int>(parsed);
-    } catch (const exception&) {
-        stringstream error;
-        error << "Invalid " << fieldName << " on line " << lineNumber
-              << ": expected an integer, received '" << value << "'";
-        throw runtime_error(error.str());
+    } catch (const std::invalid_argument&) {
+    } catch (const std::out_of_range&) {
     }
+
+    std::ostringstream error;
+    error << "Invalid " << fieldName << " on line " << lineNumber
+          << ": expected an integer, received '" << value << "'";
+    throw std::runtime_error(error.str());
 }
 }
 
-vector<Process> readProcessesFromFile(const string& inputFile) {
-    ifstream input(inputFile.c_str());
-
+std::vector<Process> readProcessesFromFile(const std::string& inputFile) {
+    std::ifstream input(inputFile.c_str());
     if (!input.is_open()) {
-        throw runtime_error("Failed to open input file: " + inputFile);
+        throw std::runtime_error("Failed to open input file: " + inputFile);
     }
 
-    vector<Process> processes;
-    string line;
-    int lineNumber = 0;
-    int processId = 1;
-
-    while (getline(input, line)) {
+    std::vector<Process> processes;
+    std::string line;
+    std::size_t lineNumber = 0;
+    while (std::getline(input, line)) {
         ++lineNumber;
-
-        const size_t commentStart = line.find('#');
-        if (commentStart != string::npos) {
-            line = line.substr(0, commentStart);
+        const std::size_t commentStart = line.find('#');
+        if (commentStart != std::string::npos) {
+            line.erase(commentStart);
         }
         line = trim(line);
-
         if (line.empty()) {
             continue;
         }
 
-        vector<string> tokens = split(line, ':');
-        if (tokens.size() != 3) {
-            stringstream error;
+        const std::size_t firstSeparator = line.find(':');
+        const std::size_t secondSeparator = firstSeparator == std::string::npos
+            ? std::string::npos : line.find(':', firstSeparator + 1);
+        if (secondSeparator == std::string::npos || line.find(':', secondSeparator + 1) != std::string::npos) {
+            std::ostringstream error;
             error << "Invalid input on line " << lineNumber
                   << ": expected burst_time:arrival_time:priority";
-            throw runtime_error(error.str());
+            throw std::runtime_error(error.str());
+        }
+        if (processes.size() >= static_cast<std::size_t>(std::numeric_limits<int>::max())) {
+            throw std::runtime_error("Too many processes: process IDs exceed the supported integer range.");
         }
 
         Process process;
-        process.id = processId++;
-        process.burstTime = parseInteger(tokens[0], "burst time", lineNumber);
-        process.arrivalTime = parseInteger(tokens[1], "arrival time", lineNumber);
-        process.priority = parseInteger(tokens[2], "priority", lineNumber);
+        process.id = static_cast<int>(processes.size() + 1);
+        process.burstTime = parseInteger(line.substr(0, firstSeparator), "burst time", lineNumber);
+        process.arrivalTime = parseInteger(line.substr(firstSeparator + 1, secondSeparator - firstSeparator - 1),
+                                           "arrival time", lineNumber);
+        process.priority = parseInteger(line.substr(secondSeparator + 1), "priority", lineNumber);
         process.remainingTime = process.burstTime;
 
         if (process.burstTime <= 0) {
-            stringstream error;
+            std::ostringstream error;
             error << "Invalid burst time on line " << lineNumber << ": value must be greater than 0";
-            throw runtime_error(error.str());
+            throw std::runtime_error(error.str());
         }
         if (process.arrivalTime < 0) {
-            stringstream error;
+            std::ostringstream error;
             error << "Invalid arrival time on line " << lineNumber << ": value cannot be negative";
-            throw runtime_error(error.str());
+            throw std::runtime_error(error.str());
         }
-
         processes.push_back(process);
     }
 
-    if (processes.empty()) {
-        throw runtime_error("Input file does not contain any processes.");
+    if (input.bad() || (input.fail() && !input.eof())) {
+        throw std::runtime_error("Failed to read input file: " + inputFile);
     }
-
+    if (processes.empty()) {
+        throw std::runtime_error("Input file does not contain any processes.");
+    }
     return processes;
 }

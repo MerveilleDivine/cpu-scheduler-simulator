@@ -1,67 +1,86 @@
 #include "Reporter.h"
 
+#include <algorithm>
+#include <array>
 #include <iomanip>
-#include <ostream>
+#include <locale>
+#include <sstream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
-using namespace std;
-
 namespace {
-double averageWaitingTime(const ScheduleResult& result) {
-    int total = 0;
-    for (size_t i = 0; i < result.processes.size(); ++i) {
-        total += result.processes[i].waitingTime;
+struct Averages {
+    double waiting;
+    double turnaround;
+    double response;
+};
+
+Averages calculateAverages(const ScheduleResult& result) {
+    if (result.processes.empty()) {
+        throw std::invalid_argument("Cannot report an empty schedule.");
     }
-    return total / static_cast<double>(result.processes.size());
+
+    long double waiting = 0;
+    long double turnaround = 0;
+    long double response = 0;
+    for (const Process& process : result.processes) {
+        waiting += process.waitingTime;
+        turnaround += process.turnaroundTime;
+        response += process.responseTime;
+    }
+    const long double count = static_cast<long double>(result.processes.size());
+    return {static_cast<double>(waiting / count),
+            static_cast<double>(turnaround / count),
+            static_cast<double>(response / count)};
 }
 
-double averageTurnaroundTime(const ScheduleResult& result) {
-    int total = 0;
-    for (size_t i = 0; i < result.processes.size(); ++i) {
-        total += result.processes[i].turnaroundTime;
+// Formatting a report must not change how the caller's next output is printed.
+class FormatGuard {
+public:
+    explicit FormatGuard(std::ostream& stream)
+        : stream_(stream), flags_(stream.flags()), precision_(stream.precision()),
+          fill_(stream.fill()) {}
+    ~FormatGuard() {
+        stream_.flags(flags_);
+        stream_.precision(precision_);
+        stream_.fill(fill_);
     }
-    return total / static_cast<double>(result.processes.size());
-}
+    FormatGuard(const FormatGuard&) = delete;
+    FormatGuard& operator=(const FormatGuard&) = delete;
 
-double averageResponseTime(const ScheduleResult& result) {
-    int total = 0;
-    for (size_t i = 0; i < result.processes.size(); ++i) {
-        total += result.processes[i].responseTime;
-    }
-    return total / static_cast<double>(result.processes.size());
-}
+private:
+    std::ostream& stream_;
+    std::ios::fmtflags flags_;
+    std::streamsize precision_;
+    char fill_;
+};
 
-void printGanttChart(const vector<GanttSegment>& ganttChart, ostream& output) {
-    if (ganttChart.empty()) {
+void printGanttChart(const std::vector<GanttSegment>& timeline, std::ostream& output) {
+    if (timeline.empty()) {
         return;
     }
 
-    output << "Gantt Chart:" << endl;
-
-    for (size_t i = 0; i < ganttChart.size(); ++i) {
-        output << "| ";
-        if (ganttChart[i].processId == 0) {
-            output << "Idle";
-        } else {
-            output << "P" << ganttChart[i].processId;
-        }
-        output << " ";
+    std::string bars;
+    std::string times = std::to_string(timeline.front().startTime);
+    for (const GanttSegment& segment : timeline) {
+        const std::string label = segment.processId == 0
+            ? "Idle" : "P" + std::to_string(segment.processId);
+        const std::string end = std::to_string(segment.endTime);
+        const std::size_t width = std::max(label.size() + 3,
+            std::max(std::to_string(segment.startTime).size(), end.size()) + 1);
+        bars += "| " + label;
+        bars.resize(bars.size() + width - label.size() - 2, ' ');
+        times.resize(bars.size(), ' ');
+        times += end;
     }
-    output << "|" << endl;
-
-    output << ganttChart.front().startTime;
-    for (size_t i = 0; i < ganttChart.size(); ++i) {
-        output << setw(6) << ganttChart[i].endTime;
-    }
-    output << endl;
+    output << "Gantt Chart:\n" << bars << "|\n" << times << '\n';
 }
 
-void printJsonString(const string& value, ostream& output) {
+void printJsonString(const std::string& value, std::ostream& output) {
     static const char* hexDigits = "0123456789abcdef";
     output << '"';
-    for (size_t i = 0; i < value.size(); ++i) {
-        const unsigned char character = static_cast<unsigned char>(value[i]);
+    for (unsigned char character : value) {
         switch (character) {
             case '"': output << "\\\""; break;
             case '\\': output << "\\\\"; break;
@@ -72,11 +91,10 @@ void printJsonString(const string& value, ostream& output) {
             case '\t': output << "\\t"; break;
             default:
                 if (character < 0x20) {
-                    output << "\\u00"
-                           << hexDigits[(character >> 4) & 0x0f]
+                    output << "\\u00" << hexDigits[character >> 4]
                            << hexDigits[character & 0x0f];
                 } else {
-                    output << value[i];
+                    output << static_cast<char>(character);
                 }
         }
     }
@@ -84,115 +102,114 @@ void printJsonString(const string& value, ostream& output) {
 }
 }
 
-void printReport(const ScheduleResult& result, ostream& output) {
-    int totalWaitingTime = 0;
-    int totalTurnaroundTime = 0;
-    int totalResponseTime = 0;
+void printReport(const ScheduleResult& result, std::ostream& output) {
+    const Averages averages = calculateAverages(result);
+    const FormatGuard guard(output);
+    output << std::dec << std::setfill(' ');
+    const int width = 13;
+    output << "Scheduling Method: " << result.algorithmName << '\n';
+    const std::array<std::string, 9> headings = {{"Process", "Arrival", "Burst", "Priority",
+        "Start", "Complete", "Waiting", "Turnaround", "Response"}};
+    for (const std::string& heading : headings) {
+        output << std::left << std::setw(width) << heading;
+    }
+    output << '\n';
 
-    output << "Scheduling Method: " << result.algorithmName << endl;
-    output << left << setw(10) << "Process"
-           << setw(12) << "Arrival"
-           << setw(10) << "Burst"
-           << setw(10) << "Priority"
-           << setw(10) << "Start"
-           << setw(12) << "Complete"
-           << setw(10) << "Waiting"
-           << setw(12) << "Turnaround"
-           << setw(10) << "Response" << endl;
-
-    for (size_t i = 0; i < result.processes.size(); ++i) {
-        const Process& process = result.processes[i];
-        output << left << setw(10) << ("P" + to_string(process.id))
-               << setw(12) << process.arrivalTime
-               << setw(10) << process.burstTime
-               << setw(10) << process.priority
-               << setw(10) << process.startTime
-               << setw(12) << process.completionTime
-               << setw(10) << process.waitingTime
-               << setw(12) << process.turnaroundTime
-               << setw(10) << process.responseTime << endl;
-
-        totalWaitingTime += process.waitingTime;
-        totalTurnaroundTime += process.turnaroundTime;
-        totalResponseTime += process.responseTime;
+    for (const Process& process : result.processes) {
+        output << std::left << std::setw(width) << ("P" + std::to_string(process.id))
+               << std::setw(width) << process.arrivalTime
+               << std::setw(width) << process.burstTime
+               << std::setw(width) << process.priority
+               << std::setw(width) << process.startTime
+               << std::setw(width) << process.completionTime
+               << std::setw(width) << process.waitingTime
+               << std::setw(width) << process.turnaroundTime
+               << std::setw(width) << process.responseTime << '\n';
     }
 
-    output << fixed << setprecision(2);
-    output << "Average Waiting Time: "
-           << totalWaitingTime / static_cast<double>(result.processes.size()) << " ms" << endl;
-    output << "Average Turnaround Time: "
-           << totalTurnaroundTime / static_cast<double>(result.processes.size()) << " ms" << endl;
-    output << "Average Response Time: "
-           << totalResponseTime / static_cast<double>(result.processes.size()) << " ms" << endl;
-    output << endl;
+    output << std::fixed << std::setprecision(2)
+           << "Average Waiting Time: " << averages.waiting << " ms\n"
+           << "Average Turnaround Time: " << averages.turnaround << " ms\n"
+           << "Average Response Time: " << averages.response << " ms\n\n";
     printGanttChart(result.ganttChart, output);
 }
 
-void printComparisonReport(const vector<ScheduleResult>& results, ostream& output) {
-    output << "Scheduling Algorithm Comparison" << endl;
-    output << left << setw(48) << "Algorithm"
-           << setw(18) << "Avg Waiting"
-           << setw(20) << "Avg Turnaround"
-           << setw(18) << "Avg Response" << endl;
+void printComparisonReport(const std::vector<ScheduleResult>& results, std::ostream& output) {
+    const FormatGuard guard(output);
+    output << std::dec << std::setfill(' ')
+           << "Scheduling Algorithm Comparison\n"
+           << std::left << std::setw(48) << "Algorithm"
+           << std::setw(18) << "Avg Waiting"
+           << std::setw(20) << "Avg Turnaround"
+           << std::setw(18) << "Avg Response" << '\n'
+           << std::fixed << std::setprecision(2);
 
-    output << fixed << setprecision(2);
-    for (size_t i = 0; i < results.size(); ++i) {
-        output << left << setw(48) << results[i].algorithmName
-               << setw(18) << averageWaitingTime(results[i])
-               << setw(20) << averageTurnaroundTime(results[i])
-               << setw(18) << averageResponseTime(results[i]) << endl;
+    for (const ScheduleResult& result : results) {
+        const Averages averages = calculateAverages(result);
+        output << std::left << std::setw(48) << result.algorithmName
+               << std::setw(18) << averages.waiting
+               << std::setw(20) << averages.turnaround
+               << std::setw(18) << averages.response << '\n';
     }
 }
 
-void printJsonReport(const ScheduleResult& result, ostream& output) {
-    output << "{\n  \"algorithm\": ";
-    printJsonString(result.algorithmName, output);
-    output << fixed << setprecision(2);
-    output << ",\n  \"averages\": {"
-           << "\"waiting_time\": " << averageWaitingTime(result) << ", "
-           << "\"turnaround_time\": " << averageTurnaroundTime(result) << ", "
-           << "\"response_time\": " << averageResponseTime(result) << "},\n";
+void printJsonReport(const ScheduleResult& result, std::ostream& output) {
+    const Averages averages = calculateAverages(result);
+    // JSON numbers always use a decimal point, regardless of the caller's locale.
+    std::ostringstream json;
+    json.imbue(std::locale::classic());
+    json << "{\n  \"algorithm\": ";
+    printJsonString(result.algorithmName, json);
+    json << std::fixed << std::setprecision(2)
+         << ",\n  \"averages\": {\"waiting_time\": " << averages.waiting
+         << ", \"turnaround_time\": " << averages.turnaround
+         << ", \"response_time\": " << averages.response << "},\n"
+         << "  \"processes\": [\n";
 
-    output << "  \"processes\": [\n";
-    for (size_t i = 0; i < result.processes.size(); ++i) {
+    for (std::size_t i = 0; i < result.processes.size(); ++i) {
         const Process& process = result.processes[i];
-        output << "    {\"id\": " << process.id
-               << ", \"arrival_time\": " << process.arrivalTime
-               << ", \"burst_time\": " << process.burstTime
-               << ", \"priority\": " << process.priority
-               << ", \"start_time\": " << process.startTime
-               << ", \"completion_time\": " << process.completionTime
-               << ", \"waiting_time\": " << process.waitingTime
-               << ", \"turnaround_time\": " << process.turnaroundTime
-               << ", \"response_time\": " << process.responseTime << "}";
-        output << (i + 1 == result.processes.size() ? "\n" : ",\n");
+        json << "    {\"id\": " << process.id
+             << ", \"arrival_time\": " << process.arrivalTime
+             << ", \"burst_time\": " << process.burstTime
+             << ", \"priority\": " << process.priority
+             << ", \"start_time\": " << process.startTime
+             << ", \"completion_time\": " << process.completionTime
+             << ", \"waiting_time\": " << process.waitingTime
+             << ", \"turnaround_time\": " << process.turnaroundTime
+             << ", \"response_time\": " << process.responseTime << "}"
+             << (i + 1 == result.processes.size() ? "\n" : ",\n");
     }
-    output << "  ],\n  \"timeline\": [\n";
-    for (size_t i = 0; i < result.ganttChart.size(); ++i) {
+    json << "  ],\n  \"timeline\": [\n";
+    for (std::size_t i = 0; i < result.ganttChart.size(); ++i) {
         const GanttSegment& segment = result.ganttChart[i];
-        output << "    {\"process_id\": ";
+        json << "    {\"process_id\": ";
         if (segment.processId == 0) {
-            output << "null";
+            json << "null";
         } else {
-            output << segment.processId;
+            json << segment.processId;
         }
-        output << ", \"start_time\": " << segment.startTime
-               << ", \"end_time\": " << segment.endTime << "}";
-        output << (i + 1 == result.ganttChart.size() ? "\n" : ",\n");
+        json << ", \"start_time\": " << segment.startTime
+             << ", \"end_time\": " << segment.endTime << "}"
+             << (i + 1 == result.ganttChart.size() ? "\n" : ",\n");
     }
-    output << "  ]\n}\n";
+    json << "  ]\n}\n";
+    output << json.str();
 }
 
-void printJsonComparisonReport(const vector<ScheduleResult>& results, ostream& output) {
-    output << fixed << setprecision(2);
-    output << "{\n  \"algorithms\": [\n";
-    for (size_t i = 0; i < results.size(); ++i) {
-        output << "    {\"algorithm\": ";
-        printJsonString(results[i].algorithmName, output);
-        output << ", \"average_waiting_time\": " << averageWaitingTime(results[i])
-               << ", \"average_turnaround_time\": " << averageTurnaroundTime(results[i])
-               << ", \"average_response_time\": " << averageResponseTime(results[i]) << "}";
-        output << (i + 1 == results.size() ? "\n" : ",\n");
+void printJsonComparisonReport(const std::vector<ScheduleResult>& results, std::ostream& output) {
+    std::ostringstream json;
+    json.imbue(std::locale::classic());
+    json << std::fixed << std::setprecision(2) << "{\n  \"algorithms\": [\n";
+    for (std::size_t i = 0; i < results.size(); ++i) {
+        const ScheduleResult& result = results[i];
+        const Averages averages = calculateAverages(result);
+        json << "    {\"algorithm\": ";
+        printJsonString(result.algorithmName, json);
+        json << ", \"average_waiting_time\": " << averages.waiting
+             << ", \"average_turnaround_time\": " << averages.turnaround
+             << ", \"average_response_time\": " << averages.response << "}"
+             << (i + 1 == results.size() ? "\n" : ",\n");
     }
-    output << "  ]\n}\n";
+    json << "  ]\n}\n";
+    output << json.str();
 }
