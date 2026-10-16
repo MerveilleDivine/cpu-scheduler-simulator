@@ -10,141 +10,69 @@
 
 # CPU Scheduler Simulator
 
-A C++ command-line simulator for exploring how preemptive and non-preemptive CPU scheduling decisions change waiting time, turnaround time, and response time.
+I built this C++ simulator to compare CPU scheduling algorithms on the same workload. It reports each process's waiting, turnaround, and response times, plus an execution timeline. Reports are available as terminal text or JSON.
 
-Give it one process file and an algorithm, and it produces the execution order, per-process metrics, averages, and a Gantt-style timeline. Comparison mode runs the same workload through five schedulers so their trade-offs are visible side by side. Reports can be emitted as readable terminal text or structured JSON.
+## Build and run
 
-## Why this project matters
+Requirements: a C++11 compiler and CMake 3.20 or newer for the commands below. Python 3 enables the CLI regression suite.
 
-This began as an Operating Systems course assignment. The first version worked, but most of the logic lived in one file.
-
-I returned to it later and rebuilt the project around clearer responsibilities:
-
-- parsing is separate from scheduling;
-- scheduling is separate from reporting;
-- behaviour is protected by CLI regression tests;
-- the project builds through both `g++` and CMake;
-- every push and pull request is checked by GitHub Actions.
-
-The algorithms are the subject of the project. The refactor is the better demonstration of how I engineer now.
-
-## Algorithms
-
-| Algorithm | Scheduling model | Selection rule |
-|---|---|---|
-| **FCFS** | Non-preemptive | Earliest arriving process runs first |
-| **SJF** | Non-preemptive | Shortest available burst runs first |
-| **SRTF** | Preemptive | Process with the shortest remaining time runs, with reevaluation on every time step |
-| **Priority** | Non-preemptive | Lowest priority number runs first |
-| **Round Robin** | Preemptive | Ready processes share the CPU using a time quantum |
-| **None** | Sequential | Processes run in file order |
-
-## Comparison result
-
-Using the included sample workload and a Round Robin quantum of `2`:
-
-| Algorithm | Avg. waiting | Avg. turnaround | Avg. response |
-|---|---:|---:|---:|
-| FCFS | 7.00 ms | 10.80 ms | 7.00 ms |
-| SJF | 6.40 ms | 10.20 ms | 6.40 ms |
-| SRTF | 6.00 ms | 9.80 ms | 4.80 ms |
-| Priority | 6.40 ms | 10.20 ms | 6.40 ms |
-| Round Robin | 11.40 ms | 15.20 ms | 3.00 ms |
-
-SRTF gives this workload the lowest average waiting and turnaround time. Round Robin responds sooner, but increases average waiting and turnaround time. The simulator is meant to expose that kind of trade-off rather than declare one universal winner.
-
-## Architecture
-
-```mermaid
-flowchart LR
-    A[Process file] --> B[Parser]
-    B --> C[Scheduler]
-    C --> D[Schedule result]
-    D --> E[Reporter]
-    E --> F[Terminal]
-    E --> G[Output file]
-```
-
-| Component | Responsibility |
-|---|---|
-| `Parser` | Reads and validates process data |
-| `Scheduler` | Implements each scheduling strategy |
-| `Reporter` | Formats text and JSON metrics, comparisons, process details, and the timeline |
-| `main.cpp` | Parses CLI arguments and coordinates the workflow |
-| `tests/` | Exercises algorithms, metrics, parsing, errors, JSON, comparison mode, and file output |
-
-## Quick start
-
-### Build with CMake
+### Linux and macOS
 
 ```bash
 cmake -S . -B build
-cmake --build build
-ctest --test-dir build --output-on-failure
+cmake --build build --config Release
+ctest --test-dir build -C Release --output-on-failure
+./build/scheduler -f examples/sample_input.txt --compare --quantum 2
 ```
 
-The executable is created at `build/scheduler`.
+### Windows
 
-### Or compile directly
+With CMake and the Visual Studio C++ build tools installed, run in PowerShell:
 
-```bash
-g++ -std=c++11 src/main.cpp src/Parser.cpp src/Scheduler.cpp src/Reporter.cpp -Iinclude -o scheduler
+```powershell
+cmake -S . -B build
+cmake --build build --config Release
+ctest --test-dir build -C Release --output-on-failure
+.\build\Release\scheduler.exe -f examples/sample_input.txt --compare --quantum 2
 ```
 
-## Usage
+The executable path depends on the CMake generator. With Ninja, use `.\build\scheduler.exe`. The C++ tests run without Python; CMake adds the CLI tests when Python 3 is available. Bash is only used for an additional smoke test on Unix.
 
-The examples below use the directly compiled `./scheduler` binary. If you built with CMake, use `./build/scheduler` on Linux and macOS or the corresponding executable path produced by your generator.
-
-Run one algorithm:
+### Compile directly
 
 ```bash
+g++ -std=c++11 -Wall -Wextra -Wpedantic src/main.cpp src/Parser.cpp src/Scheduler.cpp src/Reporter.cpp -Iinclude -o scheduler
 ./scheduler -f examples/sample_input.txt --algorithm fcfs
 ```
 
-Run Round Robin:
+The remaining examples use the CMake executable path for Linux and macOS.
 
-```bash
-./scheduler -f examples/sample_input.txt --algorithm rr --quantum 2
-```
+## Algorithms
 
-Run the preemptive shortest-remaining-time scheduler:
+| Option | Model | Selection rule |
+|---|---|---|
+| `fcfs` | Non-preemptive | Earliest arrival |
+| `sjf` | Non-preemptive | Shortest burst among ready processes |
+| `srtf` | Preemptive | Shortest remaining burst among ready processes |
+| `priority` | Non-preemptive | Lowest priority number among ready processes |
+| `rr` | Preemptive | Ready queue, with a fixed time quantum |
+| `none` | File-order baseline | Run processes in their input order |
 
-```bash
-./scheduler -f examples/sample_input.txt --algorithm srtf
-```
+Ties in SJF, SRTF, and Priority are resolved by arrival time, then process ID. FCFS and Round Robin use arrival time, then ID for initial queue order. IDs follow the order of valid process lines in the input file.
 
-Compare the implemented schedulers:
+In Round Robin, processes arriving during a time slice, including at its end, enter the queue before the running process is requeued. In `none` mode, the CPU waits for the next listed process to arrive even if another process is ready.
 
-```bash
-./scheduler -f examples/sample_input.txt --compare --quantum 2
-```
+SJF, SRTF, and Priority keep ready processes in heaps. SRTF advances to arrivals and completions instead of stepping through every time unit. Round Robin skips repeated slices when no other process is ready.
 
-Write the report to a file:
+## Input
 
-```bash
-./scheduler -f examples/sample_input.txt -o output.txt --algorithm priority
-```
-
-Emit a machine-readable report:
-
-```bash
-./scheduler -f examples/sample_input.txt --algorithm srtf --format json
-./scheduler -f examples/sample_input.txt --compare --quantum 2 --format json -o comparison.json
-```
-
-Supported algorithm values are `none`, `fcfs`, `sjf`, `srtf`, `priority`, and `rr`. Supported formats are `text` and `json`. Short and long CLI options are both accepted. Conflicting modes, unsupported formats, and non-integer quantum values fail with clear errors.
-
-## Input format
-
-Each line represents one process:
+Each process occupies one line:
 
 ```text
 burst_time:arrival_time:priority
 ```
 
-Whitespace is ignored, blank lines are allowed, and `#` starts a comment. Burst time must be greater than zero and arrival time cannot be negative. Invalid fields report the exact line and field name.
-
-The included sample is:
+The sample in `examples/sample_input.txt` contains:
 
 ```text
 5:0:3
@@ -154,86 +82,101 @@ The included sample is:
 3:3:1
 ```
 
-In this implementation, a smaller priority number means a higher priority.
-
-## Example output
+Fields must be integers. Burst time must be positive, arrival time must be nonnegative, and priority can be any signed integer. A lower number means higher priority. Blank lines, spaces around fields, and comments starting with `#` are supported:
 
 ```text
-Scheduling Method: First Come, First Served
-Process   Arrival   Burst   Priority   Start   Complete   Waiting   Turnaround   Response
-P1        0         5       3          0       5          0         5            0
-P2        1         4       2          5       9          4         8            4
-P3        1         3       1          9       12         8         11           8
-P4        2         4       2          12      16         10        14           10
-P5        3         3       1          16      19         13        16           13
-
-Average Waiting Time: 7.00 ms
-Average Turnaround Time: 10.80 ms
-Average Response Time: 7.00 ms
-
-Gantt Chart:
-| P1 | P2 | P3 | P4 | P5 |
-0     5     9    12    16    19
+# burst : arrival : priority
+5 : 0 : 3  # P1
+4 : 1 : 2  # P2
 ```
 
-## Verification
+An invalid field reports its line number. An empty workload is rejected.
 
-Run the regression suite directly:
+## Usage
+
+Run one algorithm:
 
 ```bash
-bash tests/run_cli_tests.sh
+./build/scheduler -f examples/sample_input.txt --algorithm srtf
+./build/scheduler -f examples/sample_input.txt --algorithm rr --quantum 2
 ```
 
-Compile and run the focused C++ tests directly:
+Compare FCFS, SJF, SRTF, Priority, and Round Robin:
 
 ```bash
-g++ -std=c++11 -Wall -Wextra -Wpedantic tests/scheduler_tests.cpp src/Parser.cpp src/Scheduler.cpp src/Reporter.cpp -Iinclude -o scheduler_unit_tests
-./scheduler_unit_tests
+./build/scheduler -f examples/sample_input.txt --compare --quantum 2
 ```
 
-The suite checks:
+Write JSON to a file:
 
-- FCFS, SJF, SRTF, Priority, and Round Robin output;
-- comparison mode;
-- the generated Gantt chart;
-- output-file generation;
-- JSON reports and comparisons through Python's standard JSON parser;
-- invalid Round Robin quantum handling;
-- parser comments, whitespace, field validation, SRTF preemption, idle time, and metric calculations.
-
-GitHub Actions compiles with strict warnings, runs focused C++ tests and CLI regression tests, then repeats the build and both test targets through CMake and CTest on Ubuntu.
-
-## Repository map
-
-```text
-cpu-scheduler-simulator/
-├── .github/workflows/cpp-ci.yml
-├── assets/readme-banner.svg
-├── examples/sample_input.txt
-├── include/
-│   ├── Parser.h
-│   ├── Process.h
-│   ├── Reporter.h
-│   └── Scheduler.h
-├── src/
-│   ├── main.cpp
-│   ├── Parser.cpp
-│   ├── Reporter.cpp
-│   └── Scheduler.cpp
-├── tests/
-│   ├── run_cli_tests.sh
-│   ├── scheduler_tests.cpp
-│   └── validate_json.py
-├── CMakeLists.txt
-└── README.md
+```bash
+./build/scheduler -f examples/sample_input.txt --algorithm srtf --format json -o schedule.json
+./build/scheduler -f examples/sample_input.txt --compare --quantum 2 --format json -o comparison.json
 ```
 
-## Current scope
+The report is also printed to the terminal when `-o` is supplied. A single-algorithm JSON report includes `algorithm`, `averages`, `processes`, and `timeline`. Idle intervals have a `null` process ID. Comparison JSON contains an `algorithms` array of average metrics.
 
-The simulator currently focuses on educational, single-core CPU scheduling. Context-switch overhead, multicore scheduling, preemptive Priority Scheduling, and starvation prevention are not implemented yet.
+| Option | Purpose |
+|---|---|
+| `-f`, `--input` | Process input file |
+| `-a`, `--algorithm` | One algorithm from the table above |
+| `--compare` | Compare the five scheduling algorithms |
+| `-q`, `--quantum` | Positive integer time slice for Round Robin |
+| `--format` | `text` (default) or `json` |
+| `-o`, `--output` | Save a copy of the report |
+| `-h`, `--help` | Show usage |
 
-Possible next steps include configurable context-switch cost, CSV export, starvation and fairness metrics, preemptive Priority Scheduling with aging, and a richer terminal timeline.
+`--compare` and `--algorithm` cannot be combined. If the input file, algorithm, or required quantum is omitted, the program prompts for it.
 
-## Technology
+## Sample results
 
-`C++11` · `Operating Systems` · `CPU Scheduling` · `CMake` · `CTest` · `GitHub Actions`
+With the included workload and a Round Robin quantum of `2`:
+
+| Algorithm | Average waiting | Average turnaround | Average response |
+|---|---:|---:|---:|
+| FCFS | 7.00 | 10.80 | 7.00 |
+| SJF | 6.40 | 10.20 | 6.40 |
+| SRTF | 6.00 | 9.80 | 4.80 |
+| Priority | 6.40 | 10.20 | 6.40 |
+| Round Robin | 11.40 | 15.20 | 3.00 |
+
+Times use the same unit as the input; text reports label them as milliseconds. For each process:
+
+- Turnaround time = completion time − arrival time.
+- Waiting time = turnaround time − burst time.
+- Response time = first start time − arrival time.
+
+Round Robin gives a faster first response on this workload, while SRTF gives the lowest average waiting time. These results depend on the workload and the quantum.
+
+## Tests
+
+Run the tests through CTest:
+
+```bash
+ctest --test-dir build -C Release --output-on-failure
+```
+
+To run the CLI suite directly:
+
+```bash
+python3 tests/validate_json.py ./build/scheduler examples/sample_input.txt
+```
+
+The tests cover scheduling order, preemption, idle intervals, metrics, input validation, JSON reports, comparison mode, and file output. GitHub Actions is configured to build and test on Ubuntu and Windows, with AddressSanitizer and UndefinedBehaviorSanitizer checks on Ubuntu.
+
+## Code layout
+
+| Path | Responsibility |
+|---|---|
+| `include/Process.h` | Process data, timeline segments, and schedule results |
+| `src/Parser.cpp` | Read and validate process files |
+| `src/Scheduler.cpp` | Scheduling rules and metric calculations |
+| `src/Reporter.cpp` | Text and JSON output |
+| `src/main.cpp` | CLI arguments and interactive prompts |
+| `tests/` | C++ tests and CLI regression checks |
+
+## Scope and limits
+
+The model has one CPU and one CPU burst per process. Context switches take no time. It does not model I/O, multiple cores, priority aging, or preemptive Priority scheduling.
+
+Input fields and simulated timestamps use C++ `int`. A run is rejected if its timeline would exceed `std::numeric_limits<int>::max()` (normally 2,147,483,647). Small Round Robin quanta can produce large timelines when several long processes share the CPU.

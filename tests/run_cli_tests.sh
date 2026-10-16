@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-BINARY="${SCHEDULER_BINARY:-$ROOT_DIR/scheduler}"
+BINARY="${SCHEDULER_BINARY:-}"
 INPUT_FILE="$ROOT_DIR/examples/sample_input.txt"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
@@ -24,13 +24,17 @@ assert_contains() {
 }
 
 build_if_needed() {
-    if [[ -x "$BINARY" ]]; then
+    if [[ -n "$BINARY" ]]; then
+        if [[ ! -x "$BINARY" ]]; then
+            echo "Scheduler binary is not executable: $BINARY" >&2
+            exit 1
+        fi
         return
     fi
 
     echo "Compiling scheduler..."
-    g++ -std=c++11 src/main.cpp src/Parser.cpp src/Scheduler.cpp src/Reporter.cpp -Iinclude -o scheduler
-    BINARY="$ROOT_DIR/scheduler"
+    BINARY="$TMP_DIR/scheduler"
+    g++ -std=c++11 -Wall -Wextra -Wpedantic src/main.cpp src/Parser.cpp src/Scheduler.cpp src/Reporter.cpp -Iinclude -o "$BINARY"
 }
 
 run_and_assert() {
@@ -69,7 +73,7 @@ run_and_assert "Round Robin" \
     "Scheduling Method: Round Robin - Quantum 2" \
     "$BINARY" -f "$INPUT_FILE" --algorithm rr --quantum 2
 
-assert_contains "$($BINARY -f "$INPUT_FILE" --algorithm fcfs)" "Gantt Chart:" "Gantt chart output"
+assert_contains "$("$BINARY" -f "$INPUT_FILE" --algorithm fcfs)" "Gantt Chart:" "Gantt chart output"
 
 echo "Testing output file generation..."
 REPORT_FILE="$TMP_DIR/report.txt"
@@ -79,7 +83,7 @@ assert_contains "$REPORT_OUTPUT" "Scheduling Method: First Come, First Served" "
 assert_contains "$REPORT_OUTPUT" "Average Waiting Time:" "output file average waiting metric"
 
 echo "Testing comparison mode..."
-COMPARE_OUTPUT="$($BINARY -f "$INPUT_FILE" --compare --quantum 2)"
+COMPARE_OUTPUT="$("$BINARY" -f "$INPUT_FILE" --compare --quantum 2)"
 assert_contains "$COMPARE_OUTPUT" "Scheduling Algorithm Comparison" "comparison title"
 assert_contains "$COMPARE_OUTPUT" "First Come, First Served" "comparison FCFS row"
 assert_contains "$COMPARE_OUTPUT" "Shortest Job First - Non-Preemptive" "comparison SJF row"
@@ -88,7 +92,7 @@ assert_contains "$COMPARE_OUTPUT" "Priority Scheduling - Non-Preemptive" "compar
 assert_contains "$COMPARE_OUTPUT" "Round Robin - Quantum 2" "comparison RR row"
 
 set +e
-INVALID_OUTPUT="$($BINARY -f "$INPUT_FILE" --algorithm rr --quantum 0 2>&1)"
+INVALID_OUTPUT="$("$BINARY" -f "$INPUT_FILE" --algorithm rr --quantum 0 2>&1)"
 INVALID_STATUS=$?
 set -e
 if [[ $INVALID_STATUS -eq 0 ]]; then
