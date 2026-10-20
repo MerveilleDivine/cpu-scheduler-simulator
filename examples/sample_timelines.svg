@@ -1,0 +1,119 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="800" viewBox="0 0 1280 800" role="img" aria-labelledby="title description">
+<title id="title">CPU scheduling on one workload</title>
+<desc id="description">Execution timelines and average process times from the simulator. Colors identify processes; dark intervals are idle.</desc>
+<rect width="1280" height="800" fill="#101114" rx="24"/>
+<g font-family="Arial, sans-serif" fill="#f4f4f5">
+<text x="54" y="66" font-size="15" fill="#a1a1aa" text-anchor="start">C++ / OPERATING SYSTEMS</text>
+<text x="54" y="116" font-size="34" fill="#f4f4f5" text-anchor="start">One workload. Five scheduling policies.</text>
+<text x="54" y="155" font-size="17" fill="#b8bbc3" text-anchor="start">Computed by the simulator. Round Robin quantum: 2</text>
+<text x="54" y="210" font-size="13" fill="#b8bbc3" text-anchor="start">ALGORITHM</text>
+<text x="170" y="210" font-size="13" fill="#b8bbc3" text-anchor="start">EXECUTION TIMELINE</text>
+<text x="930" y="195" font-size="13" fill="#b8bbc3" text-anchor="middle">AVG WAIT</text>
+<text x="1045" y="195" font-size="13" fill="#b8bbc3" text-anchor="middle">AVG TURNAROUND</text>
+<text x="1170" y="195" font-size="13" fill="#b8bbc3" text-anchor="middle">AVG RESPONSE</text>
+<text x="54" y="257" font-size="17" fill="#f4f4f5" text-anchor="start">FCFS</text>
+<rect x="170.000" y="230" width="178.947" height="42" fill="#d6e8ff" stroke="#101114" stroke-width="2"><title>P1: 0 to 5</title></rect>
+<text x="259.474" y="256" font-size="13" fill="#15171c" text-anchor="middle">P1</text>
+<rect x="348.947" y="230" width="143.158" height="42" fill="#e3d8ff" stroke="#101114" stroke-width="2"><title>P2: 5 to 9</title></rect>
+<text x="420.526" y="256" font-size="13" fill="#15171c" text-anchor="middle">P2</text>
+<rect x="492.105" y="230" width="107.368" height="42" fill="#bcebd7" stroke="#101114" stroke-width="2"><title>P3: 9 to 12</title></rect>
+<text x="545.789" y="256" font-size="13" fill="#15171c" text-anchor="middle">P3</text>
+<rect x="599.474" y="230" width="143.158" height="42" fill="#ffdda8" stroke="#101114" stroke-width="2"><title>P4: 12 to 16</title></rect>
+<text x="671.053" y="256" font-size="13" fill="#15171c" text-anchor="middle">P4</text>
+<rect x="742.632" y="230" width="107.368" height="42" fill="#f9cbd8" stroke="#101114" stroke-width="2"><title>P5: 16 to 19</title></rect>
+<text x="796.316" y="256" font-size="13" fill="#15171c" text-anchor="middle">P5</text>
+<text x="170" y="292" font-size="12" fill="#a1a1aa" text-anchor="start">0</text>
+<text x="850" y="292" font-size="12" fill="#a1a1aa" text-anchor="end">19</text>
+<text x="930" y="257" font-size="20" fill="#f4f4f5" text-anchor="middle">7.00</text>
+<text x="1045" y="257" font-size="20" fill="#f4f4f5" text-anchor="middle">10.80</text>
+<text x="1170" y="257" font-size="20" fill="#f4f4f5" text-anchor="middle">7.00</text>
+<text x="54" y="343" font-size="17" fill="#f4f4f5" text-anchor="start">SJF</text>
+<rect x="170.000" y="316" width="178.947" height="42" fill="#d6e8ff" stroke="#101114" stroke-width="2"><title>P1: 0 to 5</title></rect>
+<text x="259.474" y="342" font-size="13" fill="#15171c" text-anchor="middle">P1</text>
+<rect x="348.947" y="316" width="107.368" height="42" fill="#bcebd7" stroke="#101114" stroke-width="2"><title>P3: 5 to 8</title></rect>
+<text x="402.632" y="342" font-size="13" fill="#15171c" text-anchor="middle">P3</text>
+<rect x="456.316" y="316" width="107.368" height="42" fill="#f9cbd8" stroke="#101114" stroke-width="2"><title>P5: 8 to 11</title></rect>
+<text x="510.0" y="342" font-size="13" fill="#15171c" text-anchor="middle">P5</text>
+<rect x="563.684" y="316" width="143.158" height="42" fill="#e3d8ff" stroke="#101114" stroke-width="2"><title>P2: 11 to 15</title></rect>
+<text x="635.263" y="342" font-size="13" fill="#15171c" text-anchor="middle">P2</text>
+<rect x="706.842" y="316" width="143.158" height="42" fill="#ffdda8" stroke="#101114" stroke-width="2"><title>P4: 15 to 19</title></rect>
+<text x="778.421" y="342" font-size="13" fill="#15171c" text-anchor="middle">P4</text>
+<text x="170" y="378" font-size="12" fill="#a1a1aa" text-anchor="start">0</text>
+<text x="850" y="378" font-size="12" fill="#a1a1aa" text-anchor="end">19</text>
+<text x="930" y="343" font-size="20" fill="#f4f4f5" text-anchor="middle">6.40</text>
+<text x="1045" y="343" font-size="20" fill="#f4f4f5" text-anchor="middle">10.20</text>
+<text x="1170" y="343" font-size="20" fill="#f4f4f5" text-anchor="middle">6.40</text>
+<text x="54" y="429" font-size="17" fill="#f4f4f5" text-anchor="start">SRTF</text>
+<rect x="170.000" y="402" width="35.789" height="42" fill="#d6e8ff" stroke="#101114" stroke-width="2"><title>P1: 0 to 1</title></rect>
+<text x="187.895" y="428" font-size="13" fill="#15171c" text-anchor="middle">P1</text>
+<rect x="205.789" y="402" width="107.368" height="42" fill="#bcebd7" stroke="#101114" stroke-width="2"><title>P3: 1 to 4</title></rect>
+<text x="259.474" y="428" font-size="13" fill="#15171c" text-anchor="middle">P3</text>
+<rect x="313.158" y="402" width="107.368" height="42" fill="#f9cbd8" stroke="#101114" stroke-width="2"><title>P5: 4 to 7</title></rect>
+<text x="366.842" y="428" font-size="13" fill="#15171c" text-anchor="middle">P5</text>
+<rect x="420.526" y="402" width="143.158" height="42" fill="#d6e8ff" stroke="#101114" stroke-width="2"><title>P1: 7 to 11</title></rect>
+<text x="492.105" y="428" font-size="13" fill="#15171c" text-anchor="middle">P1</text>
+<rect x="563.684" y="402" width="143.158" height="42" fill="#e3d8ff" stroke="#101114" stroke-width="2"><title>P2: 11 to 15</title></rect>
+<text x="635.263" y="428" font-size="13" fill="#15171c" text-anchor="middle">P2</text>
+<rect x="706.842" y="402" width="143.158" height="42" fill="#ffdda8" stroke="#101114" stroke-width="2"><title>P4: 15 to 19</title></rect>
+<text x="778.421" y="428" font-size="13" fill="#15171c" text-anchor="middle">P4</text>
+<text x="170" y="464" font-size="12" fill="#a1a1aa" text-anchor="start">0</text>
+<text x="850" y="464" font-size="12" fill="#a1a1aa" text-anchor="end">19</text>
+<text x="930" y="429" font-size="20" fill="#f4f4f5" text-anchor="middle">6.00</text>
+<text x="1045" y="429" font-size="20" fill="#f4f4f5" text-anchor="middle">9.80</text>
+<text x="1170" y="429" font-size="20" fill="#f4f4f5" text-anchor="middle">4.80</text>
+<text x="54" y="515" font-size="17" fill="#f4f4f5" text-anchor="start">Priority</text>
+<rect x="170.000" y="488" width="178.947" height="42" fill="#d6e8ff" stroke="#101114" stroke-width="2"><title>P1: 0 to 5</title></rect>
+<text x="259.474" y="514" font-size="13" fill="#15171c" text-anchor="middle">P1</text>
+<rect x="348.947" y="488" width="107.368" height="42" fill="#bcebd7" stroke="#101114" stroke-width="2"><title>P3: 5 to 8</title></rect>
+<text x="402.632" y="514" font-size="13" fill="#15171c" text-anchor="middle">P3</text>
+<rect x="456.316" y="488" width="107.368" height="42" fill="#f9cbd8" stroke="#101114" stroke-width="2"><title>P5: 8 to 11</title></rect>
+<text x="510.0" y="514" font-size="13" fill="#15171c" text-anchor="middle">P5</text>
+<rect x="563.684" y="488" width="143.158" height="42" fill="#e3d8ff" stroke="#101114" stroke-width="2"><title>P2: 11 to 15</title></rect>
+<text x="635.263" y="514" font-size="13" fill="#15171c" text-anchor="middle">P2</text>
+<rect x="706.842" y="488" width="143.158" height="42" fill="#ffdda8" stroke="#101114" stroke-width="2"><title>P4: 15 to 19</title></rect>
+<text x="778.421" y="514" font-size="13" fill="#15171c" text-anchor="middle">P4</text>
+<text x="170" y="550" font-size="12" fill="#a1a1aa" text-anchor="start">0</text>
+<text x="850" y="550" font-size="12" fill="#a1a1aa" text-anchor="end">19</text>
+<text x="930" y="515" font-size="20" fill="#f4f4f5" text-anchor="middle">6.40</text>
+<text x="1045" y="515" font-size="20" fill="#f4f4f5" text-anchor="middle">10.20</text>
+<text x="1170" y="515" font-size="20" fill="#f4f4f5" text-anchor="middle">6.40</text>
+<text x="54" y="601" font-size="17" fill="#f4f4f5" text-anchor="start">Round Robin</text>
+<rect x="170.000" y="574" width="71.579" height="42" fill="#d6e8ff" stroke="#101114" stroke-width="2"><title>P1: 0 to 2</title></rect>
+<text x="205.789" y="600" font-size="13" fill="#15171c" text-anchor="middle">P1</text>
+<rect x="241.579" y="574" width="71.579" height="42" fill="#e3d8ff" stroke="#101114" stroke-width="2"><title>P2: 2 to 4</title></rect>
+<text x="277.368" y="600" font-size="13" fill="#15171c" text-anchor="middle">P2</text>
+<rect x="313.158" y="574" width="71.579" height="42" fill="#bcebd7" stroke="#101114" stroke-width="2"><title>P3: 4 to 6</title></rect>
+<text x="348.947" y="600" font-size="13" fill="#15171c" text-anchor="middle">P3</text>
+<rect x="384.737" y="574" width="71.579" height="42" fill="#ffdda8" stroke="#101114" stroke-width="2"><title>P4: 6 to 8</title></rect>
+<text x="420.526" y="600" font-size="13" fill="#15171c" text-anchor="middle">P4</text>
+<rect x="456.316" y="574" width="71.579" height="42" fill="#d6e8ff" stroke="#101114" stroke-width="2"><title>P1: 8 to 10</title></rect>
+<text x="492.105" y="600" font-size="13" fill="#15171c" text-anchor="middle">P1</text>
+<rect x="527.895" y="574" width="71.579" height="42" fill="#f9cbd8" stroke="#101114" stroke-width="2"><title>P5: 10 to 12</title></rect>
+<text x="563.684" y="600" font-size="13" fill="#15171c" text-anchor="middle">P5</text>
+<rect x="599.474" y="574" width="71.579" height="42" fill="#e3d8ff" stroke="#101114" stroke-width="2"><title>P2: 12 to 14</title></rect>
+<text x="635.263" y="600" font-size="13" fill="#15171c" text-anchor="middle">P2</text>
+<rect x="671.053" y="574" width="35.789" height="42" fill="#bcebd7" stroke="#101114" stroke-width="2"><title>P3: 14 to 15</title></rect>
+<text x="688.947" y="600" font-size="13" fill="#15171c" text-anchor="middle">P3</text>
+<rect x="706.842" y="574" width="71.579" height="42" fill="#ffdda8" stroke="#101114" stroke-width="2"><title>P4: 15 to 17</title></rect>
+<text x="742.632" y="600" font-size="13" fill="#15171c" text-anchor="middle">P4</text>
+<rect x="778.421" y="574" width="35.789" height="42" fill="#d6e8ff" stroke="#101114" stroke-width="2"><title>P1: 17 to 18</title></rect>
+<text x="796.316" y="600" font-size="13" fill="#15171c" text-anchor="middle">P1</text>
+<rect x="814.211" y="574" width="35.789" height="42" fill="#f9cbd8" stroke="#101114" stroke-width="2"><title>P5: 18 to 19</title></rect>
+<text x="832.105" y="600" font-size="13" fill="#15171c" text-anchor="middle">P5</text>
+<text x="170" y="636" font-size="12" fill="#a1a1aa" text-anchor="start">0</text>
+<text x="850" y="636" font-size="12" fill="#a1a1aa" text-anchor="end">19</text>
+<text x="930" y="601" font-size="20" fill="#f4f4f5" text-anchor="middle">11.40</text>
+<text x="1045" y="601" font-size="20" fill="#f4f4f5" text-anchor="middle">15.20</text>
+<text x="1170" y="601" font-size="20" fill="#f4f4f5" text-anchor="middle">3.00</text>
+<rect x="54" y="695" width="15" height="15" rx="3" fill="#d6e8ff"/>
+<text x="78" y="708" font-size="14" fill="#f4f4f5" text-anchor="start">P1</text>
+<rect x="145" y="695" width="15" height="15" rx="3" fill="#e3d8ff"/>
+<text x="169" y="708" font-size="14" fill="#f4f4f5" text-anchor="start">P2</text>
+<rect x="236" y="695" width="15" height="15" rx="3" fill="#bcebd7"/>
+<text x="260" y="708" font-size="14" fill="#f4f4f5" text-anchor="start">P3</text>
+<rect x="327" y="695" width="15" height="15" rx="3" fill="#ffdda8"/>
+<text x="351" y="708" font-size="14" fill="#f4f4f5" text-anchor="start">P4</text>
+<rect x="418" y="695" width="15" height="15" rx="3" fill="#f9cbd8"/>
+<text x="442" y="708" font-size="14" fill="#f4f4f5" text-anchor="start">P5</text>
+<text x="54" y="752" font-size="14" fill="#a1a1aa" text-anchor="start">Source: sample_input.txt · All times use the input unit. Context-switch cost: 0.</text>
+</g></svg>

@@ -16,6 +16,10 @@ output.txt
 results.txt
 *.log
 
+# Python tooling
+__pycache__/
+*.py[cod]
+
 # Editor files
 .vscode/
 .idea/

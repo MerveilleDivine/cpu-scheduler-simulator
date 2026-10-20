@@ -132,6 +132,14 @@ The report is also printed to the terminal when `-o` is supplied. A single-algor
 
 With the included workload and a Round Robin quantum of `2`:
 
+![Execution timelines for the five policies, computed from the sample input](examples/sample_timelines.svg)
+
+Each bar shows when a process actually runs. SRTF interrupts P1 when a shorter job arrives; Round Robin shares the CPU in two-unit slices. The diagram and its averages come from the executable's JSON output. To regenerate it after building:
+
+```bash
+python3 tools/render_timelines.py ./build/scheduler examples/sample_input.txt --quantum 2
+```
+
 | Algorithm | Average waiting | Average turnaround | Average response |
 |---|---:|---:|---:|
 | FCFS | 7.00 | 10.80 | 7.00 |
@@ -162,7 +170,7 @@ To run the CLI suite directly:
 python3 tests/validate_json.py ./build/scheduler examples/sample_input.txt
 ```
 
-The tests cover scheduling order, preemption, idle intervals, metrics, input validation, JSON reports, comparison mode, and file output. GitHub Actions is configured to build and test on Ubuntu and Windows, with AddressSanitizer and UndefinedBehaviorSanitizer checks on Ubuntu.
+The tests cover scheduling order, preemption, idle intervals, metrics, input validation, JSON reports, comparison mode, and file output. The Python suite checks 636 schedules against an independent implementation that advances one time unit at a time, then checks large timestamps and CLI errors. GitHub Actions is configured to build and test on Ubuntu and Windows, with AddressSanitizer and UndefinedBehaviorSanitizer checks on Ubuntu.
 
 ## Code layout
 
@@ -174,6 +182,7 @@ The tests cover scheduling order, preemption, idle intervals, metrics, input val
 | `src/Reporter.cpp` | Text and JSON output |
 | `src/main.cpp` | CLI arguments and interactive prompts |
 | `tests/` | C++ tests and CLI regression checks |
+| `tools/render_timelines.py` | Generate the sample SVG from executable JSON reports |
 
 ## Scope and limits
 
