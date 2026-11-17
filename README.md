@@ -1,8 +1,4 @@
 <p align="center">
-  <img src="./assets/readme-banner.svg" width="100%" alt="CPU Scheduler Simulator" />
-</p>
-
-<p align="center">
   <a href="https://github.com/MerveilleDivine/cpu-scheduler-simulator/actions/workflows/cpp-ci.yml">
     <img src="https://github.com/MerveilleDivine/cpu-scheduler-simulator/actions/workflows/cpp-ci.yml/badge.svg" alt="C++ CI" />
   </a>
